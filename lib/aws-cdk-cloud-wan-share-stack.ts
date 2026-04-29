@@ -1,16 +1,41 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { CoreNetwork, InspectionVpc, PrivateVpc } from './constructs';
+import { NETWORK_CONFIG, cloudWanSegment } from './network-config';
 
 export class AwsCdkCloudWanShareStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    const region = cdk.Stack.of(this).region;
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'AwsCdkCloudWanShareQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    const coreNetwork = new CoreNetwork(this, 'CoreNetwork', { region });
+
+    new InspectionVpc(this, 'InspectionVpc', {
+      vpcCidr: NETWORK_CONFIG.inspection.vpcCidr,
+      coreNetworkId: coreNetwork.coreNetworkId,
+      coreNetworkArn: coreNetwork.coreNetworkArn,
+    });
+
+    new PrivateVpc(this, 'ShareVpc', {
+      vpcCidr: NETWORK_CONFIG.share.vpcCidr,
+      coreNetworkId: coreNetwork.coreNetworkId,
+      coreNetworkArn: coreNetwork.coreNetworkArn,
+      segmentTag: cloudWanSegment.Share,
+    });
+
+    new PrivateVpc(this, 'ProdVpc', {
+      vpcCidr: NETWORK_CONFIG.prod.vpcCidr,
+      coreNetworkId: coreNetwork.coreNetworkId,
+      coreNetworkArn: coreNetwork.coreNetworkArn,
+      segmentTag: cloudWanSegment.Prod,
+    });
+
+    new PrivateVpc(this, 'DevVpc', {
+      vpcCidr: NETWORK_CONFIG.dev.vpcCidr,
+      coreNetworkId: coreNetwork.coreNetworkId,
+      coreNetworkArn: coreNetwork.coreNetworkArn,
+      segmentTag: cloudWanSegment.Dev,
+    });
   }
 }
